@@ -9,6 +9,8 @@ import warnings
 import collections
 import copy
 
+from functools import cmp_to_key
+
 from .instrument import Instrument
 from .containers import KeySignature, TimeSignature
 from .containers import Note, PitchBend, ControlChange
@@ -377,7 +379,7 @@ class PrettyMIDI(object):
         ioi = ioi[ioi > .05]
         ioi = ioi[ioi < 2]
         # Normalize all iois into the range 30...300bpm
-        for n in xrange(ioi.shape[0]):
+        for n in range(ioi.shape[0]):
             while ioi[n] < .2:
                 ioi[n] *= 2
         # Array of inner onset interval cluster means
@@ -935,17 +937,17 @@ class PrettyMIDI(object):
             # The spacing for these scores is 256, which is larger than the
             # largest value a MIDI value can take.
             secondary_sort = {
-                'Set Tempo': lambda(e): (1 * 256 * 256),
-                'Time Signature': lambda(e): (2 * 256 * 256),
-                'Key Signature': lambda(e): (3 * 256 * 256),
-                'Program Change': lambda(e): (4 * 256 * 256),
-                'Pitch Wheel': lambda(e): ((5 * 256 * 256) + e.pitch),
-                'Control Change': lambda(e): (
+                'Set Tempo': lambda e: (1 * 256 * 256),
+                'Time Signature': lambda e: (2 * 256 * 256),
+                'Key Signature': lambda e: (3 * 256 * 256),
+                'Program Change': lambda e: (4 * 256 * 256),
+                'Pitch Wheel': lambda e: ((5 * 256 * 256) + e.pitch),
+                'Control Change': lambda e: (
                     (6 * 256 * 256) + (e.control * 256) + e.value),
-                'Note Off': lambda(e): ((7 * 256 * 256) + (e.pitch * 256)),
-                'Note On': lambda(e): (
+                'Note Off': lambda e: ((7 * 256 * 256) + (e.pitch * 256)),
+                'Note On': lambda e: (
                     (8 * 256 * 256) + (e.pitch * 256) + e.velocity),
-                'End of Track': lambda(e): (9 * 256 * 256)
+                'End of Track': lambda e: (9 * 256 * 256)
             }
             # If the events have the same tick, and both events have types
             # which appear in the secondary_sort dictionary, use the dictionary
@@ -1003,7 +1005,7 @@ class PrettyMIDI(object):
         tracks += [timing_track]
         # Create a list of possible channels to assign - this seems to matter
         # for some synths.
-        channels = range(16)
+        channels = list(range(16))
         # Don't assign the drum channel by mistake!
         channels.remove(9)
         for n, instrument in enumerate(self.instruments):
@@ -1050,7 +1052,7 @@ class PrettyMIDI(object):
                 control_event.channel = channel
                 track += [control_event]
             # Sort all the events using the event_compare comparator.
-            sorted_track = sorted(track, cmp=event_compare)
+            sorted_track = sorted(track, key=cmp_to_key(event_compare))
             track = midi.Track(sorted_track, tick_relative=False)
 
             # If there's a note off event and a note on event with the same
